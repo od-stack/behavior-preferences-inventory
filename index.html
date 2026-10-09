@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Behavior Preferences Inventory</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:wght@400;500;700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#f5f6f8; --card:#ffffff; --ink:#1b2230; --muted:#5d6678; --line:#dde1e8;
+  --accent:#1b2230; --accent-ink:#ffffff; --ok:#1f8a4c; --warn:#b4540a;
+  --blue:#2f6fde; --green:#2e9e5b; --yellow:#f0b400; --red:#d93a3a;
+  --chip:#eef0f4; --chip-hover:#e1e5ec;
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    --bg:#12151b; --card:#1b2029; --ink:#eef0f4; --muted:#9aa3b5; --line:#2c3340;
+    --accent:#eef0f4; --accent-ink:#12151b; --ok:#4cc27e; --warn:#f2a45c;
+    --chip:#262c38; --chip-hover:#323a49;
+  }
+}
+*{box-sizing:border-box}
+html{scroll-padding-top:90px}
+body{
+  margin:0; background:var(--bg); color:var(--ink);
+  font-family:"Schibsted Grotesk",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  line-height:1.5; -webkit-font-smoothing:antialiased;
+}
+.wrap{max-width:780px; margin:0 auto; padding:0 18px 80px}
+header.top{padding:48px 0 24px}
+h1{font-size:clamp(28px,5vw,40px); line-height:1.1; margin:0 0 14px; font-weight:800; letter-spacing:-.02em}
+.intro{color:var(--muted); max-width:62ch; margin:0 0 6px}
+.rules{
+  margin:20px 0 0; padding:16px 18px; border:1px solid var(--line); border-radius:10px;
+  background:var(--card);
+}
+.rules strong{display:block; margin-bottom:6px}
+.rules ul{margin:0; padding-left:20px}
+.rules li{margin:3px 0}
+.progress{
+  position:sticky; top:0; z-index:5; background:var(--bg);
+  padding:12px 0 10px; border-bottom:1px solid var(--line); margin-bottom:22px;
+}
+.progress-row{display:flex; justify-content:space-between; font-size:14px; color:var(--muted); margin-bottom:6px}
+.bar{height:6px; border-radius:6px; background:var(--chip); overflow:hidden}
+.bar i{display:block; height:100%; width:0; background:var(--accent); transition:width .25s ease}
+fieldset.q{
+  margin:0 0 18px; padding:20px 20px 14px; border:1px solid var(--line); border-radius:12px;
+  background:var(--card); min-width:0;
+}
+fieldset.q.done{border-color:var(--ok)}
+legend{padding:0 8px; margin-left:-8px; font-weight:700; font-size:18px}
+.opt{padding:12px 0; border-top:1px solid var(--line)}
+.opt:first-of-type{border-top:0}
+.opt p{margin:0 0 8px}
+.chips{display:flex; gap:6px; flex-wrap:wrap}
+.chip{
+  font:inherit; font-weight:500; width:44px; height:40px; border-radius:8px;
+  border:1px solid var(--line); background:var(--chip); color:var(--ink); cursor:pointer;
+}
+.chip:hover:not(:disabled){background:var(--chip-hover)}
+.chip[aria-pressed="true"]{background:var(--accent); color:var(--accent-ink); border-color:var(--accent)}
+.chip:disabled{opacity:.28; cursor:not-allowed}
+.chip:focus-visible,button.primary:focus-visible,.link:focus-visible{
+  outline:3px solid var(--blue); outline-offset:2px;
+}
+.status{font-size:14px; margin:8px 0 4px; min-height:21px; color:var(--muted)}
+.status.ok{color:var(--ok)}
+.status.warn{color:var(--warn)}
+.actions{margin-top:26px; display:flex; flex-wrap:wrap; gap:14px; align-items:center}
+button.primary{
+  font:inherit; font-weight:700; padding:13px 26px; border-radius:10px; border:0;
+  background:var(--accent); color:var(--accent-ink); cursor:pointer;
+}
+button.primary:disabled{opacity:.35; cursor:not-allowed}
+.link{
+  font:inherit; background:none; border:0; padding:6px 2px; color:var(--ink);
+  text-decoration:underline; cursor:pointer;
+}
+.hint{color:var(--muted); font-size:14px}
+
+/* results */
+#results{display:none}
+#results h2{font-size:28px; margin:36px 0 8px; letter-spacing:-.01em}
+.res-grid{display:grid; grid-template-columns:minmax(0,1fr); gap:24px; align-items:center}
+@media (min-width:720px){.res-grid{grid-template-columns:minmax(0,1.1fr) minmax(0,1fr)}}
+.chart-box{background:var(--card); border:1px solid var(--line); border-radius:12px; padding:14px}
+svg{width:100%; height:auto; display:block}
+.scores{list-style:none; margin:0; padding:0}
+.scores li{
+  display:grid; grid-template-columns:14px 1fr auto; gap:12px; align-items:center;
+  padding:12px 0; border-bottom:1px solid var(--line);
+}
+.scores .sw{width:14px; height:14px; border-radius:50%}
+.scores .val{font-weight:800; font-size:22px; font-variant-numeric:tabular-nums}
+.scores small{display:block; color:var(--muted); font-size:13px}
+.note{margin-top:18px; color:var(--muted); font-size:14px; max-width:62ch}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="top">
+    <h1>Behavior Preferences Inventory</h1>
+    <p class="intro">Rate each situation by thinking about how a person approaches their working life. Each of the 12 groups has four statements to score.</p>
+    <div class="rules">
+      <strong>How to score each group</strong>
+      <ul>
+        <li>Give <b>0</b> to the statement that fits least and <b>6</b> to the one that fits most.</li>
+        <li>Give the other two statements a score from <b>1 to 5</b>. The two scores must be different.</li>
+        <li>Every score can be used only once within a group.</li>
+      </ul>
+    </div>  </header>
+
+  <div class="progress" aria-live="polite">
+    <div class="progress-row"><span id="ptext">0 of 12 groups complete</span><span id="ppct">0%</span></div>
+    <div class="bar"><i id="pbar"></i></div>
+  </div>
+
+  <form id="form" onsubmit="return false" novalidate></form>
+
+  <div class="actions" id="actions">
+    <button class="primary" id="submit" disabled>See my results</button>
+    <span class="hint" id="subhint">Complete all 12 groups to continue.</span>
+  </div>
+
+  <section id="results" aria-live="polite">
+    <h2>Your results</h2>
+    <p class="hint">Each score is the average of your 12 ratings for that color (0 to 6).</p>
+    <div class="res-grid">
+      <div class="chart-box" id="chart"></div>
+      <ul class="scores" id="scores"></ul>
+    </div>
+    <p class="note">Colors above 3.00 are preferred above the mid level. The dashed ring on the chart marks 3.00.</p>
+    <div class="actions">
+      <button class="link" id="copy">Copy my scores</button>
+      <button class="link" id="retake">Retake the inventory</button>
+    </div>
+  </section>
+
+</div>
+
+<script>
+/* ============ DATA ============ */
+// Option order matters: 1st = Red, 2nd = Yellow, 3rd = Green, 4th = Blue.
+const QUESTIONS = [
+  {t:"Characteristics as a colleague", o:[
+    "Someone who makes sure work is done systematically and logically",
+    "Someone who is encouraging, warm and fun",
+    "Someone who avoids conflict",
+    "Someone who digs into the reason behind things and investigates"]},
+  {t:"What they do in a disagreement", o:[
+    "Helping the other person see the matter from a simple, logical angle",
+    "Getting a commitment now for situations where I may want something later",
+    "Putting myself in the other person's shoes and adapting",
+    "Examining the topic in depth"]},
+  {t:"Actions that make them happy", o:[
+    "Solving problems",
+    "Being creative and coming up with new ideas",
+    "Understanding other people's feelings and helping them",
+    "Getting more done than planned"]},
+  {t:"The impression they want to leave when first meeting someone", o:[
+    "Strong and intelligent",
+    "Impressive and different",
+    "Patient and relaxed",
+    "Careful and well-informed"]},
+  {t:"What they do when things go wrong", o:[
+    "Focuses on the flaw in their approach and changes it",
+    "Boosts the enthusiasm of those around them and creates room for fresh ideas",
+    "Remembers the bad experience and plans to avoid it",
+    "Reviews every aspect of the issue and reshapes each stage"]},
+  {t:"Traits they use to persuade", o:[
+    "Intelligence and authority",
+    "Empathy and creativity",
+    "Knowing the subject and being responsible",
+    "Prior research and preparation"]},
+  {t:"Their approach in new relationships", o:[
+    "Checks whether the other person is competitive and participative",
+    "Checks whether the other person is fun and interesting",
+    "Checks whether the other person is thoughtful and caring",
+    "Checks whether the other person is knowledgeable and reliable"]},
+  {t:"How they behave toward others", o:[
+    "Realistic and logical",
+    "Supportive and helpful",
+    "Attentive and understanding",
+    "Serious and cautious"]},
+  {t:"What they expect when listening to a work topic", o:[
+    "Listens for what needs to be done right away and wants to know the payoff",
+    "Wants to hear appealing, unusual and different ideas",
+    "Tries to understand how it will affect people and wants to learn what is expected of them",
+    "Wants to learn the reason and every detail of the topic"]},
+  {t:"What they value in arguments", o:[
+    "Being blunt",
+    "Making an impact",
+    "Not hurting anyone",
+    "Not skipping any question mark"]},
+  {t:"What they hear in the criticism they receive", o:[
+    "You are harsh and impatient",
+    "You are messy and irresponsible",
+    "You are weak and emotional",
+    "You are cold and pessimistic"]},
+  {t:"What they show under pressure", o:[
+    "Critical approach and rejection",
+    "Breaking easily and making sudden decisions",
+    "Rushing to prove themselves, and anxiety",
+    "Silence and withdrawal"]}
+];
+// Position in each group -> color
+const COLOR_BY_POS = ["red","yellow","green","blue"];
+const COLORS = {
+  blue:  {label:"Blue",   hex:"#2f6fde"},
+  green: {label:"Green",  hex:"#2e9e5b"},
+  yellow:{label:"Yellow", hex:"#f0b400"},
+  red:   {label:"Red",    hex:"#d93a3a"}
+};
+const DISPLAY_ORDER = ["blue","green","yellow","red"];
+
+/* ============ STATE ============ */
+const answers = QUESTIONS.map(() => [null,null,null,null]);
+const form = document.getElementById("form");
+const els = []; // per-question references
+
+/* ============ BUILD FORM ============ */
+QUESTIONS.forEach((q, qi) => {
+  const fs = document.createElement("fieldset");
+  fs.className = "q";
+  fs.innerHTML = `<legend>${qi+1}. ${q.t}</legend>`;
+  const chipRefs = [];
+  q.o.forEach((text, oi) => {
+    const row = document.createElement("div");
+    row.className = "opt";
+    const p = document.createElement("p");
+    p.textContent = text;
+    const chips = document.createElement("div");
+    chips.className = "chips";
+    chips.setAttribute("role","group");
+    chips.setAttribute("aria-label", `Score for: ${text}`);
+    const rowChips = [];
+    for (let v = 0; v <= 6; v++) {
+      const b = document.createElement("button");
+      b.type = "button";
+      b.className = "chip";
+      b.textContent = v;
+      b.setAttribute("aria-pressed","false");
+      b.addEventListener("click", () => pick(qi, oi, v));
+      chips.appendChild(b);
+      rowChips.push(b);
+    }
+    row.append(p, chips);
+    fs.appendChild(row);
+    chipRefs.push(rowChips);
+  });
+  const status = document.createElement("div");
+  status.className = "status";
+  fs.appendChild(status);
+  form.appendChild(fs);
+  els.push({fs, chipRefs, status});
+});
+
+/* ============ LOGIC ============ */
+function pick(qi, oi, v) {
+  const a = answers[qi];
+  a[oi] = (a[oi] === v) ? null : v;   // click again to clear
+  refresh(qi);
+  updateProgress();
+}
+
+function groupState(a) {
+  const filled = a.filter(x => x !== null);
+  if (filled.length < 4) return {valid:false, msg:`${filled.length} of 4 statements scored.`, cls:""};
+  if (!filled.includes(0) || !filled.includes(6))
+    return {valid:false, msg:"One statement must get 0 and one must get 6.", cls:"warn"};
+  return {valid:true, msg:"Complete", cls:"ok"};
+}
+
+function refresh(qi) {
+  const a = answers[qi], {fs, chipRefs, status} = els[qi];
+  chipRefs.forEach((rowChips, oi) => {
+    rowChips.forEach((b, v) => {
+      const selected = a[oi] === v;
+      const taken = !selected && a.includes(v);
+      b.setAttribute("aria-pressed", selected ? "true" : "false");
+      b.disabled = taken;
+      b.title = taken ? "Already used in this group" : "";
+    });
+  });
+  const s = groupState(a);
+  status.textContent = s.msg;
+  status.className = "status " + s.cls;
+  fs.classList.toggle("done", s.valid);
+}
+
+function completeCount() { return answers.filter(a => groupState(a).valid).length; }
+
+function updateProgress() {
+  const n = completeCount();
+  document.getElementById("ptext").textContent = `${n} of 12 groups complete`;
+  document.getElementById("ppct").textContent = Math.round(n/12*100) + "%";
+  document.getElementById("pbar").style.width = (n/12*100) + "%";
+  const btn = document.getElementById("submit");
+  btn.disabled = n < 12;
+  document.getElementById("subhint").textContent =
+    n < 12 ? `${12-n} group${12-n===1?"":"s"} left.` : "All groups complete.";
+}
+
+function compute() {
+  const sums = {blue:0, green:0, yellow:0, red:0};
+  answers.forEach(a => a.forEach((v, pos) => { sums[COLOR_BY_POS[pos]] += v; }));
+  const avg = {};
+  Object.keys(sums).forEach(k => avg[k] = sums[k] / 12);
+  return avg;
+}
+
+/* ============ CHART ============ */
+function polar(cx, cy, r, deg) {
+  const rad = deg * Math.PI / 180;
+  return [cx + r*Math.cos(rad), cy + r*Math.sin(rad)];
+}
+function wedge(cx, cy, r, a1, a2) {
+  const [x1,y1] = polar(cx,cy,r,a1), [x2,y2] = polar(cx,cy,r,a2);
+  return `M${cx} ${cy} L${x1.toFixed(2)} ${y1.toFixed(2)} A${r} ${r} 0 0 1 ${x2.toFixed(2)} ${y2.toFixed(2)} Z`;
+}
+// Quadrants (screen angles, clockwise from the right): Red top-right, Yellow bottom-right,
+// Green bottom-left, Blue top-left.
+const QUAD = {red:[-90,0], yellow:[0,90], green:[90,180], blue:[180,270]};
+
+function chartSVG(avg) {
+  const cx = 200, cy = 200, R = 160;
+  const rOf = s => s / 6 * R;
+  let out = `<svg viewBox="0 0 400 400" role="img" aria-label="Circle chart of your four color scores">`;
+  // faint full-scale quadrants
+  DISPLAY_ORDER.forEach(k => {
+    out += `<path d="${wedge(cx,cy,R,...QUAD[k])}" fill="${COLORS[k].hex}" fill-opacity=".07"/>`;
+  });
+  // scored wedges
+  DISPLAY_ORDER.forEach(k => {
+    const r = Math.max(rOf(avg[k]), 2);
+    out += `<path d="${wedge(cx,cy,r,...QUAD[k])}" fill="${COLORS[k].hex}" fill-opacity=".85" stroke="${COLORS[k].hex}" stroke-width="1.5"/>`;
+  });
+  // rings
+  out += `<circle cx="${cx}" cy="${cy}" r="${R}" fill="none" stroke="currentColor" stroke-opacity=".35"/>`;
+  out += `<circle cx="${cx}" cy="${cy}" r="${rOf(3)}" fill="none" stroke="currentColor" stroke-opacity=".7" stroke-dasharray="5 5"/>`;
+  // axes
+  out += `<line x1="${cx-R}" y1="${cy}" x2="${cx+R}" y2="${cy}" stroke="currentColor" stroke-opacity=".25"/>`;
+  out += `<line x1="${cx}" y1="${cy-R}" x2="${cx}" y2="${cy+R}" stroke="currentColor" stroke-opacity=".25"/>`;
+  // labels
+  out += `<text x="${cx+4}" y="${cy-rOf(3)-5}" font-size="11" fill="currentColor" fill-opacity=".8">3.00</text>`;
+  DISPLAY_ORDER.forEach(k => {
+    const mid = (QUAD[k][0] + QUAD[k][1]) / 2;
+    const [lx, ly] = polar(cx, cy, R + 0, mid);
+    const [tx, ty] = polar(cx, cy, Math.max(rOf(avg[k]), 24) * 0.62, mid);
+    out += `<text x="${tx}" y="${ty+5}" text-anchor="middle" font-size="15" font-weight="800" fill="#fff" stroke="#000" stroke-opacity=".25" stroke-width=".6" paint-order="stroke">${avg[k].toFixed(2)}</text>`;
+  });
+  out += `</svg>`;
+  return out;
+}
+
+/* ============ RESULTS ============ */
+function showResults(avg) {
+  document.getElementById("chart").innerHTML = chartSVG(avg);
+  const ul = document.getElementById("scores");
+  ul.innerHTML = "";
+  DISPLAY_ORDER.forEach(k => {
+    const li = document.createElement("li");
+    const above = avg[k] > 3;
+    li.innerHTML = `<span class="sw" style="background:${COLORS[k].hex}"></span>
+      <span><b>${COLORS[k].label}</b><small>${above ? "Above the mid level" : "At or below the mid level"}</small></span>
+      <span class="val">${avg[k].toFixed(2)}</span>`;
+    ul.appendChild(li);
+  });
+  document.getElementById("form").style.display = "none";
+  document.querySelector(".progress").style.display = "none";
+  document.getElementById("actions").style.display = "none";
+  document.querySelector(".rules").style.display = "none";
+  const r = document.getElementById("results");
+  r.style.display = "block";
+  r.scrollIntoView({behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth"});
+}
+
+/* ============ EVENTS ============ */
+document.getElementById("submit").addEventListener("click", () => {
+  if (completeCount() < 12) return;
+  const avg = compute();
+  showResults(avg);
+});
+
+document.getElementById("copy").addEventListener("click", async () => {
+  const avg = compute();
+  const text = DISPLAY_ORDER.map(k => `${COLORS[k].label}: ${avg[k].toFixed(2)}`).join("\n");
+  try { await navigator.clipboard.writeText(text); document.getElementById("copy").textContent = "Copied"; }
+  catch (e) { prompt("Copy your scores:", text); }
+});
+
+document.getElementById("retake").addEventListener("click", () => {
+  answers.forEach(a => a.fill(null));
+  QUESTIONS.forEach((_, qi) => refresh(qi));
+  updateProgress();
+  document.getElementById("results").style.display = "none";
+  document.getElementById("copy").textContent = "Copy my scores";
+  ["form",".progress","actions",".rules"].forEach(s => {
+    const el = s.startsWith(".") ? document.querySelector(s) : document.getElementById(s);
+    el.style.display = "";
+  });
+  window.scrollTo({top: 0});
+});
+
+QUESTIONS.forEach((_, qi) => refresh(qi));
+updateProgress();
+</script>
+</body>
+</html>
